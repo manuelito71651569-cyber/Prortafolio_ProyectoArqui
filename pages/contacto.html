@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contacto | Ruel Manuel</title>
+  <link rel="stylesheet" href="../assets/css/estilos.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="bg-glow">
+    <div class="glow-1"></div>
+    <div class="glow-2"></div>
+  </div>
+
+  <nav class="nav-floating">
+    <div class="nav-logo">
+      <div class="logo-icon">RM</div>
+      <span>Ruel Manuel</span>
+    </div>
+    <div class="nav-links">
+      <a href="../index.html">Inicio</a>
+      <a href="sobreMi.html">Sobre Mí</a>
+      <a href="cursos.html">Cursos</a>
+      <a href="contacto.html">Contacto</a>
+      <button class="btn-theme-toggle" onclick="TEMA.toggle()" id="themeBtn">🌙</button>
+      <a href="login.html" class="btn-admin-pill">Admin</a>
+    </div>
+  </nav>
+
+  <header class="section-padding" style="padding-top: 160px; text-align: center;">
+    <div class="container">
+      <span class="section-subtitle">Conectemos</span>
+      <h1 class="section-title">Hablemos de tu Proyecto</h1>
+      <p class="hero-desc" style="margin: 0 auto 40px auto;">Envíame un mensaje directo o contáctame a través de mis perfiles profesionales.</p>
+    </div>
+  </header>
+
+  <section class="section-padding" style="padding-top: 0;">
+    <div class="container">
+      <div class="about-grid">
+        <!-- Columna Izquierda: Información -->
+        <div class="reveal">
+          <div class="curso-card" style="padding: 40px;">
+            <h2 class="outfit" style="font-size: 2rem; margin-bottom: 30px;">Información de Contacto</h2>
+            
+            <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 40px;">
+              <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="font-size: 2rem; color: var(--primary);">📧</div>
+                <div>
+                  <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Correo Electrónico</div>
+                  <div style="font-weight: 700; font-size: 1.1rem;" id="cCorreo">Cargando...</div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="font-size: 2rem; color: var(--accent);">📱</div>
+                <div>
+                  <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Teléfono</div>
+                  <div style="font-weight: 700; font-size: 1.1rem;" id="cTelefono">Cargando...</div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="font-size: 2rem; color: var(--secondary);">📍</div>
+                <div>
+                  <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Ubicación</div>
+                  <div style="font-weight: 700; font-size: 1.1rem;" id="cUbicacion">Cargando...</div>
+                </div>
+              </div>
+            </div>
+            
+            <h3 class="outfit" style="font-size: 1.2rem; margin-bottom: 20px;">Redes Sociales</h3>
+            <div id="cRedes" style="display: flex; flex-wrap: wrap; gap: 12px;">
+              <!-- Dinámico -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna Derecha: Formulario -->
+        <div class="reveal" style="transition-delay: 0.2s;">
+          <div class="curso-card" style="padding: 40px;">
+            <h2 class="outfit" style="font-size: 2rem; margin-bottom: 30px;">Enviar un Mensaje</h2>
+            <form id="contactForm">
+              <div class="input-group">
+                <label>Nombre Completo</label>
+                <input type="text" class="premium-input" placeholder="Ej. Juan Pérez" required>
+              </div>
+              <div class="input-group">
+                <label>Correo Electrónico</label>
+                <input type="email" class="premium-input" placeholder="tu@correo.com" required>
+              </div>
+              <div class="input-group">
+                <label>Asunto</label>
+                <input type="text" class="premium-input" placeholder="Motivo del contacto" required>
+              </div>
+              <div class="input-group">
+                <label>Mensaje</label>
+                <textarea class="premium-input" rows="5" placeholder="Cuéntame sobre tu proyecto..." required></textarea>
+              </div>
+              <button type="submit" class="btn-premium btn-primary" style="width: 100%; justify-content: center;">Enviar Mensaje</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2026 Ruel Manuel Chavez Orihuela. Todos los derechos reservados.</p>
+  </footer>
+
+  <script src="../controllers/supabase.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      TEMA.init();
+      
+      const p = await SupabaseCtrl.getPerfil();
+      if (p) {
+        document.getElementById('cCorreo').textContent = p.correo || 'No especificado';
+        document.getElementById('cTelefono').textContent = p.telefono || 'No especificado';
+        document.getElementById('cUbicacion').textContent = p.ubicacion || 'No especificado';
+
+        const redes = [
+          { label: 'LinkedIn', url: p.linkedin, icon: '🔗' },
+          { label: 'GitHub', url: p.github, icon: '💻' },
+          { label: 'Instagram', url: p.instagram, icon: '📸' }
+        ];
+        
+        document.getElementById('cRedes').innerHTML = redes.filter(r => r.url && r.url !== '#').map(r => `
+          <a href="${r.url}" target="_blank" class="tag-premium" style="text-decoration: none; color: inherit;">
+            ${r.icon} ${r.label}
+          </a>
+        `).join('');
+      }
+
+      // Animaciones
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('active'); });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    });
+
+    document.getElementById('contactForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      alert('¡Gracias por tu mensaje! (Funcionalidad de envío en desarrollo)');
+      e.target.reset();
+    });
+  </script>
+</body>
+</html>

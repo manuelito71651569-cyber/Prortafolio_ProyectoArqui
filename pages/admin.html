@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | Ruel Manuel</title>
+  <link rel="stylesheet" href="../assets/css/estilos.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .admin-section { display: none; animation: reveal-anim 0.5s var(--ease) forwards; }
+    .admin-section.active { display: block; }
+    @keyframes reveal-anim { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .sidebar-admin {
+      position: fixed; left: 24px; top: 100px; bottom: 24px; width: 260px;
+      background: var(--bg-nav); backdrop-filter: var(--glass); border: 1px solid var(--border);
+      border-radius: 24px; padding: 32px; display: flex; flex-direction: column; gap: 10px; z-index: 100;
+    }
+    .main-admin { margin-left: 310px; padding: 120px 40px 60px 0; min-height: 100vh; }
+    
+    .nav-item-admin {
+      padding: 14px 20px; border-radius: 14px; font-weight: 700; color: var(--text-muted);
+      cursor: pointer; transition: all 0.3s var(--ease); display: flex; align-items: center; gap: 12px;
+      text-decoration: none;
+    }
+    .nav-item-admin:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+    .nav-item-admin.active { background: var(--primary); color: #fff; box-shadow: 0 10px 20px var(--primary-glow); }
+    
+    .stat-card-admin {
+      background: var(--bg-card); backdrop-filter: var(--glass); border: 1px solid var(--border);
+      border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .stat-val { font-size: 2.5rem; font-weight: 800; color: var(--primary); }
+    
+    .table-premium { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .table-premium th { text-align: left; padding: 16px; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+    .table-premium td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+    
+    .profile-upload-zone {
+      width: 160px; height: 160px; border-radius: 50%; border: 3px solid var(--primary);
+      margin: 0 auto 20px auto; overflow: hidden; position: relative; cursor: pointer;
+    }
+    .profile-upload-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .profile-upload-zone:hover .profile-upload-overlay { opacity: 1; }
+
+    /* Modales locales por si fallan en estilos.css */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+      z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-content {
+      background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 24px;
+      padding: 40px; max-width: 550px; width: 100%; position: relative;
+    }
+    .modal-close { position: absolute; top: 20px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #94a3b8; }
+    .profile-upload-zone:hover .profile-upload-overlay { opacity: 1; }
+
+    /* Previsualizador */
+    .preview-modal .modal-content { max-width: 90%; width: 1200px; height: 85vh; display: flex; flex-direction: column; padding: 60px 30px 30px 30px; }
+    .preview-body { flex: 1; width: 100%; background: #000; border-radius: 12px; overflow: hidden; position: relative; }
+    .preview-body iframe, .preview-body img, .preview-body video { width: 100%; height: 100%; object-fit: contain; border: none; }
+    /* ADMIN MODALS - GRADIENT HEADERS */
+    .admin-modal-header {
+      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+      padding: 32px 40px; color: #fff; border-radius: 32px 32px 0 0;
+      position: relative; margin: -48px -48px 40px -48px;
+    }
+    .admin-modal-header h2 { margin: 0; font-size: 1.8rem; }
+    .ms-grid-archivos {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;
+    }
+    .file-card-admin {
+      background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px;
+      padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center;
+      transition: all 0.3s var(--ease);
+    }
+    .file-card-admin:hover { background: rgba(255,255,255,0.05); transform: translateY(-5px); border-color: var(--primary); }
+    .file-icon-admin { width: 54px; height: 54px; background: rgba(139, 92, 246, 0.1); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 12px; color: var(--primary); }
+    .file-name-admin { font-weight: 700; font-size: 0.85rem; color: #fff; margin-bottom: 4px; height: 34px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .file-meta-admin { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+
+  <div class="bg-glow">
+    <div class="glow-1"></div>
+    <div class="glow-2"></div>
+  </div>
+
+  <nav class="nav-floating">
+    <div class="nav-logo" onclick="window.location.href='../index.html'" style="cursor:pointer">
+      <div class="logo-icon">RM</div>
+      <span>Admin Dashboard</span>
+    </div>
+    <div class="nav-links">
+      <button class="btn-theme-toggle" onclick="TEMA.toggle()" id="themeBtn">🌙</button>
+      <button class="btn-premium btn-secondary" style="padding: 8px 16px; border-color: #ef4444; color: #ef4444;" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </nav>
+
+  <aside class="sidebar-admin">
+    <div class="nav-item-admin active" onclick="switchTab('tab-dashboard', this)">📊 Dashboard</div>
+    <div class="nav-item-admin" onclick="switchTab('tab-perfil', this)">👤 Perfil</div>
+    <div class="nav-item-admin" onclick="switchTab('tab-cursos', this)">📚 Cursos</div>
+    <div class="nav-item-admin" onclick="switchTab('tab-archivos', this)">📁 Archivos</div>
+  </aside>
+
+  <main class="main-admin">
+    <div class="container">
+      
+      <!-- DASHBOARD -->
+      <div class="admin-section active" id="tab-dashboard">
+        <div class="cursos-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 40px;">
+          <div class="stat-card-admin">
+            <span style="font-weight: 700; color: var(--text-muted);">Cursos Totales</span>
+            <span class="stat-val" id="stCursos">0</span>
+          </div>
+          <div class="stat-card-admin">
+            <span style="font-weight: 700; color: var(--text-muted);">Archivos</span>
+            <span class="stat-val" id="stArchivos">0</span>
+          </div>
+          <div class="stat-card-admin">
+            <span style="font-weight: 700; color: var(--text-muted);">Estado DB</span>
+            <span class="stat-val" style="color: #10b981;" id="dbStatus">Conectado</span>
+          </div>
+        </div>
+
+        <div class="curso-card" style="padding: 32px;">
+          <h2 class="outfit" style="margin-bottom: 24px;">Actividad Reciente</h2>
+          <table class="table-premium">
+            <thead>
+              <tr><th>Archivo</th><th>Curso</th><th>Semana</th><th>Estado</th></tr>
+            </thead>
+            <tbody id="tablaActividad">
+              <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px;">Sincronizando datos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PERFIL -->
+      <div class="admin-section" id="tab-perfil">
+        <div class="about-grid">
+          <div class="curso-card" style="padding: 32px; text-align: center;">
+            <div class="profile-upload-zone" onclick="document.getElementById('pFotoFile').click()">
+              <img id="liveFoto" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" style="width: 100%; height: 100%; object-fit: cover; background: rgba(255,255,255,0.05);">
+              <div class="profile-upload-overlay"><span>Cambiar</span></div>
+            </div>
+            <input type="file" id="pFotoFile" style="display: none;" accept="image/*" onchange="UI_ADMIN.previewImagen(this)">
+            
+            <h3 class="outfit" style="margin-bottom: 12px;">Documentación</h3>
+            <button class="btn-premium btn-secondary" style="width: 100%; margin-bottom: 12px;" onclick="document.getElementById('pCvFile').click()">📄 Subir nuevo CV</button>
+            <input type="file" id="pCvFile" style="display: none;" accept=".pdf">
+            <p id="cvFileName" style="font-size: 0.8rem; color: var(--primary); font-weight: 700;"></p>
+          </div>
+
+          <div class="curso-card" style="padding: 32px;">
+            <h2 class="outfit" style="margin-bottom: 24px;">Información Personal</h2>
+            <form id="formPerfil">
+              <div class="cursos-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="input-group"><label>Nombre</label><input type="text" id="pNombre" class="premium-input"></div>
+                <div class="input-group"><label>Apellido</label><input type="text" id="pApellido" class="premium-input"></div>
+              </div>
+              <div class="input-group"><label>Carrera / Título</label><input type="text" id="pCarrera" class="premium-input"></div>
+              <div class="input-group"><label>Biografía</label><textarea id="pBio" class="premium-input" rows="4"></textarea></div>
+              <div class="cursos-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="input-group"><label>Correo</label><input type="email" id="pCorreo" class="premium-input"></div>
+                <div class="input-group"><label>Teléfono</label><input type="text" id="pTelefono" class="premium-input"></div>
+              </div>
+              <button type="button" class="btn-premium btn-primary" style="width: 100%; justify-content: center;" onclick="guardarPerfil()">Guardar Cambios</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- CURSOS -->
+      <div class="admin-section" id="tab-cursos">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+          <h2 class="outfit">Gestión de Cursos</h2>
+          <button class="btn-premium btn-primary" onclick="abrirModal('modalCrearCurso')">+ Nuevo Curso</button>
+        </div>
+        <div class="cursos-grid" id="gridCursosAdmin">
+          <p style="text-align: center; grid-column: 1/-1; color: var(--text-muted);">Cargando cursos...</p>
+        </div>
+      </div>
+
+      <!-- ARCHIVOS -->
+      <div class="admin-section" id="tab-archivos">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+          <h2 class="outfit">Material Académico</h2>
+          <button class="btn-premium btn-primary" onclick="abrirModal('modalSubirArchivo')">☁️ Subir Archivo</button>
+        </div>
+        <div class="ms-grid-archivos" id="gridArchivosAdmin">
+          <p style="text-align: center; grid-column: 1/-1; color: var(--text-muted);">Cargando archivos...</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- MODALES -->
+  <div class="modal-overlay" id="modalCrearCurso" onclick="cerrarModalGeneral(event, 'modalCrearCurso')">
+    <div class="modal-content">
+      <div class="modal-close" onclick="document.getElementById('modalCrearCurso').classList.remove('open')">✕</div>
+      <div class="admin-modal-header"><h2 class="outfit">Nuevo Curso</h2></div>
+      <div class="cursos-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="input-group"><label>Código</label><input type="text" id="cCodigo" class="premium-input" placeholder="Ej: 332181"></div>
+        <div class="input-group"><label>Emoji Icono</label><input type="text" id="cIcono" class="premium-input" value="📚"></div>
+      </div>
+      <div class="input-group"><label>Nombre del Curso</label><input type="text" id="cNombre" class="premium-input" placeholder="Ej: Arquitectura de Software"></div>
+      <div class="input-group"><label>Descripción</label><textarea id="cDesc" class="premium-input" rows="3" placeholder="Breve resumen del curso..."></textarea></div>
+      <button class="btn-premium btn-primary" style="width: 100%; justify-content: center;" onclick="guardarNuevoCurso()">Crear Curso</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalSubirArchivo" onclick="cerrarModalGeneral(event, 'modalSubirArchivo')">
+    <div class="modal-content">
+      <div class="modal-close" onclick="document.getElementById('modalSubirArchivo').classList.remove('open')">✕</div>
+      <div class="admin-modal-header"><h2 class="outfit">Subir Material</h2></div>
+      <div class="input-group"><label>Asignatura</label><select id="aCursoId" class="premium-input" style="background: var(--bg-main);"></select></div>
+      <div class="cursos-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="input-group"><label>Semana (1-16)</label><input type="number" id="aSemanaNum" class="premium-input" min="1" max="16" value="1"></div>
+        <div class="input-group"><label>Nombre del Archivo</label><input type="text" id="aNombre" class="premium-input" placeholder="Ej: Guía de Laboratorio"></div>
+      </div>
+      <div class="input-group"><label>Archivo Local (PDF, IMG, MP4)</label><input type="file" id="aFileLocal" class="premium-input" style="padding: 10px;"></div>
+      <div style="text-align: center; margin: 15px 0; color: var(--text-muted); font-size: 0.7rem; font-weight: 800; letter-spacing: 1px;">O VINCULAR ENLACE EXTERNO</div>
+      <div class="input-group"><input type="url" id="aRuta" class="premium-input" placeholder="https://drive.google.com/..."></div>
+      <button class="btn-premium btn-primary" style="width: 100%; justify-content: center; height: 54px;" onclick="subirArchivoDirecto()">Publicar Material</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay preview-modal" id="modalPreview" onclick="cerrarModalGeneral(event, 'modalPreview')">
+    <div class="modal-content">
+      <div class="modal-close" onclick="document.getElementById('modalPreview').classList.remove('open'); document.getElementById('pvBody').innerHTML='';">✕</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 id="pvTitulo" class="outfit" style="margin:0; color:white;">Previsualización</h3>
+        <a id="pvDownload" href="#" download class="btn-premium btn-primary" style="padding: 8px 16px; font-size: 0.8rem;">Descargar Directo</a>
+      </div>
+      <div class="preview-body" id="pvBody"></div>
+    </div>
+  </div>
+
+  <script src="../controllers/supabase.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script>
+    function switchTab(tabId, el) {
+      document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-item-admin').forEach(i => i.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      el.classList.add('active');
+    }
+    function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+    function cerrarModalGeneral(e, id) { if(e.target.id === id) document.getElementById(id).classList.remove('open'); }
+    function cerrarSesion() { SupabaseCtrl.logout(); window.location.href = '../index.html'; }
+
+    const UI_ADMIN = {
+      previewImagen(input) {
+        if (input.files && input.files[0]) {
+          const reader = new FileReader();
+          reader.onload = e => document.getElementById('liveFoto').src = e.target.result;
+          reader.readAsDataURL(input.files[0]);
+        }
+      },
+      previsualizar(url, nombre) {
+        const ext = getExtension(url);
+        const body = document.getElementById('pvBody');
+        document.getElementById('pvTitulo').textContent = nombre;
+        
+        // Configurar el botón de descarga en el modal
+        const btnDownload = document.getElementById('pvDownload');
+        btnDownload.onclick = (e) => {
+          e.preventDefault();
+          this.descargarDirecto(url, nombre);
+        };
+        
+        body.innerHTML = '';
+        if (['jpg','jpeg','png','gif','webp','svg'].includes(ext)) {
+          body.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain;">`;
+        } else if (['mp4','webm','ogg'].includes(ext)) {
+          body.innerHTML = `<video src="${url}" controls autoplay style="width:100%; height:100%;"></video>`;
+        } else if (ext === 'pdf') {
+          body.innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none;"></iframe>`;
+        } else if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
+          body.innerHTML = `<iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}" style="width:100%; height:100%; border:none;"></iframe>`;
+        } else {
+          body.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:white; gap:20px;">
+            <span style="font-size:4rem;">📄</span>
+            <p>Vista previa no disponible para .${ext}</p>
+            <button onclick="UI_ADMIN.descargarDirecto('${url}', '${nombre}')" class="btn-premium btn-primary">Descargar para ver</button>
+          </div>`;
+        }
+        document.getElementById('modalPreview').classList.add('open');
+      },
+      async descargarDirecto(url, nombre) {
+        try {
+          const res = await fetch(url);
+          const blob = await res.blob();
+          const localUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = localUrl;
+          a.download = nombre;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(localUrl);
+          a.remove();
+        } catch (e) {
+          window.open(url, '_blank');
+        }
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      TEMA.init();
+      // Check Auth
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) {
+        alert("Sesión no válida. Por favor, inicia sesión.");
+        window.location.href = 'login.html';
+        return;
+      }
+      loadData();
+    });
+
+    async function loadData() {
+      try {
+        const cursos = await SupabaseCtrl.getCursos();
+        const perfil = await SupabaseCtrl.getPerfil();
+        
+        document.getElementById('stCursos').textContent = (cursos || []).length;
+        document.getElementById('dbStatus').textContent = 'Conectado';
+        document.getElementById('dbStatus').style.color = '#10b981';
+        
+        if (perfil) {
+          document.getElementById('pNombre').value = perfil.nombre || '';
+          document.getElementById('pApellido').value = perfil.apellido || '';
+          document.getElementById('pCarrera').value = perfil.carrera || '';
+          document.getElementById('pBio').value = perfil.bio || '';
+          document.getElementById('pCorreo').value = perfil.correo || '';
+          document.getElementById('pTelefono').value = perfil.telefono || '';
+          if (perfil.foto_url) document.getElementById('liveFoto').src = perfil.foto_url;
+        }
+
+        const gridC = document.getElementById('gridCursosAdmin');
+        const selectC = document.getElementById('aCursoId');
+        const gridA = document.getElementById('gridArchivosAdmin');
+        const tableA = document.getElementById('tablaActividad');
+        
+        gridC.innerHTML = ''; selectC.innerHTML = ''; gridA.innerHTML = ''; tableA.innerHTML = '';
+        let totalA = 0;
+
+        if (!cursos || cursos.length === 0) {
+          gridC.innerHTML = '<p style="text-align: center; grid-column: 1/-1;">No hay cursos. Crea uno nuevo.</p>';
+          tableA.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay actividad.</td></tr>';
+        } else {
+          cursos.forEach(c => {
+            gridC.innerHTML += `
+              <div class="curso-card" style="padding:24px;">
+                <span class="curso-icon" style="font-size:2rem; display:block; margin-bottom:10px;">${c.icono || '📚'}</span>
+                <h3 class="curso-title">${c.nombre}</h3>
+                <p class="curso-desc">${c.codigo}</p>
+                <button class="btn-premium btn-secondary" style="color: #ef4444; width:100%; border-color:#ef4444;" onclick="eliminarCurso(${c.id})">Eliminar</button>
+              </div>
+            `;
+            selectC.innerHTML += `<option value="${c.id}">${c.nombre}</option>`;
+            
+            if (c.semanas) {
+              c.semanas.forEach(s => {
+                if (s.archivos) {
+                  totalA += s.archivos.length;
+                  s.archivos.forEach(a => {
+                    gridA.innerHTML += `
+                      <div class="file-card-admin">
+                        <div class="file-icon-admin">${getFileIcon(getExtension(a.ruta))}</div>
+                        <div class="file-name-admin">${a.nombre}</div>
+                        <div class="file-meta-admin">${c.nombre} S${s.numero}</div>
+                        <div style="display:flex; gap:8px; width:100%; margin-top:10px;">
+                          <button class="btn-premium btn-secondary" style="flex:1; font-size:0.7rem; padding:8px; background:rgba(255,255,255,0.05);" onclick="UI_ADMIN.previsualizar('${a.ruta}', '${a.nombre}')">👁️ Previa</button>
+                          <button class="btn-premium btn-secondary" style="flex:1; font-size:0.7rem; padding:8px;" onclick="UI_ADMIN.descargarDirecto('${a.ruta}', '${a.nombre}')">Bajar</button>
+                        </div>
+                        <button class="btn-premium btn-secondary" style="width:100%; font-size:0.7rem; padding:8px; margin-top:8px; color:#ef4444; border-color:rgba(239, 68, 68, 0.2);" onclick="eliminarArchivo(${a.id}, '${a.ruta}')">🗑️ Eliminar</button>
+                      </div>
+                    `;
+                  });
+                }
+              });
+            }
+          });
+        }
+        document.getElementById('stArchivos').textContent = totalA;
+        if (totalA === 0 && cursos.length > 0) tableA.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay archivos cargados.</td></tr>';
+
+      } catch (e) { 
+        console.error("Error en loadData:", e);
+        document.getElementById('dbStatus').textContent = 'Error 403';
+        document.getElementById('dbStatus').style.color = '#ef4444';
+        document.getElementById('gridArchivosAdmin').innerHTML = `
+          <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 12px;">
+            <p style="color: #ef4444; font-weight: 700;">Error de Permisos (403)</p>
+            <p style="font-size: 0.9rem; color: var(--text-muted);">Debes ejecutar el script SQL de políticas (RLS) en tu panel de Supabase para poder ver los datos.</p>
+          </div>
+        `;
+      }
+    }
+
+    async function guardarPerfil() {
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = 'Guardando...';
+      const data = {
+        nombre: document.getElementById('pNombre').value,
+        apellido: document.getElementById('pApellido').value,
+        carrera: document.getElementById('pCarrera').value,
+        bio: document.getElementById('pBio').value,
+        correo: document.getElementById('pCorreo').value,
+        telefono: document.getElementById('pTelefono').value
+      };
+      try {
+        const foto = document.getElementById('pFotoFile').files[0];
+        if (foto) data.foto_url = await SupabaseCtrl.uploadStorageFile(foto);
+        const cv = document.getElementById('pCvFile').files[0];
+        if (cv) data.cv_url = await SupabaseCtrl.uploadStorageFile(cv);
+        await SupabaseCtrl.updatePerfil(data);
+        alert('Perfil actualizado.');
+        loadData();
+      } catch (e) { alert("Error: " + e.message); }
+      btn.textContent = originalText;
+    }
+
+    async function guardarNuevoCurso() {
+      const data = {
+        codigo: document.getElementById('cCodigo').value,
+        nombre: document.getElementById('cNombre').value,
+        icono: document.getElementById('cIcono').value,
+        descripcion: document.getElementById('cDesc').value,
+        activo: true
+      };
+      try {
+        await SupabaseCtrl.createCurso(data);
+        alert('Curso creado.');
+        document.getElementById('modalCrearCurso').classList.remove('open');
+        loadData();
+      } catch (e) { alert("Error: " + e.message); }
+    }
+
+    async function eliminarArchivo(id, ruta) {
+      if (!confirm("¿Seguro que quieres eliminar este archivo permanentemente?")) return;
+      try {
+        const res = await SupabaseCtrl.deleteArchivo(id);
+        if (res) {
+          alert("Archivo eliminado con éxito");
+          loadData();
+        }
+      } catch (e) {
+        alert("Error al eliminar: " + e.message);
+      }
+    }
+
+    async function eliminarCurso(id) {
+      if (confirm('¿Eliminar curso? Esta acción borrará todas sus semanas y archivos.')) {
+        try {
+          await SupabaseCtrl.deleteCurso(id);
+          loadData();
+        } catch(e) { alert("Error al eliminar: " + e.message); }
+      }
+    }
+
+    async function subirArchivoDirecto() {
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = 'Subiendo...';
+      const cId = document.getElementById('aCursoId').value;
+      const sem = document.getElementById('aSemanaNum').value;
+      const nom = document.getElementById('aNombre').value;
+      const file = document.getElementById('aFileLocal').files[0];
+      let ruta = document.getElementById('aRuta').value;
+
+      try {
+        if (!cId) throw new Error("Selecciona un curso.");
+        if (file) ruta = await SupabaseCtrl.uploadStorageFile(file);
+        if (!ruta) throw new Error("Debes subir un archivo o poner un enlace.");
+        
+        await SupabaseCtrl.createArchivo(cId, sem, { nombre: nom || file?.name || 'Archivo', ruta });
+        alert('Archivo subido con éxito.');
+        document.getElementById('modalSubirArchivo').classList.remove('open');
+        loadData();
+      } catch (e) { alert("Error: " + e.message); }
+      btn.textContent = originalText;
+    }
+  </script>
+</body>
+</html>

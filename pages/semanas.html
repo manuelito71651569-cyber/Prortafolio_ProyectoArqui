@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Semanas | Ruel Manuel</title>
+  <link rel="stylesheet" href="../assets/css/estilos.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .weeks-container { margin-top: 60px; opacity: 0; transform: translateY(20px); transition: all 0.6s var(--ease); }
+    .weeks-container.active { opacity: 1; transform: translateY(0); }
+    
+    .unit-title { 
+      font-size: 2rem; font-weight: 800; margin-bottom: 32px; color: var(--primary); 
+      display: flex; align-items: center; gap: 20px;
+    }
+    .unit-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .weeks-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 80px; }
+    
+    .week-card {
+      background: var(--bg-card); backdrop-filter: var(--glass); border: 1px solid var(--border);
+      border-radius: 20px; padding: 28px; transition: all 0.4s var(--ease);
+      display: flex; flex-direction: column; justify-content: space-between; min-height: 220px;
+    }
+    .week-card:hover { transform: translateY(-8px); border-color: var(--primary); box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+    .week-number { font-size: 0.75rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: block; }
+    .week-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; line-height: 1.4; color: var(--text-main); }
+    .week-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; border-top: 1px solid var(--border); }
+    
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
+      z-index: 2000; display: none; align-items: center; justify-content: center; padding: 24px;
+    }
+    /* MODAL SEMANA - ESTILO PREMIUM SEGÚN IMAGEN */
+    .modal-semana .modal-content { padding: 0; overflow: hidden; border: none; max-width: 850px; }
+    
+    .modal-header-gradient {
+      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+      padding: 40px; color: #fff; position: relative;
+      border-radius: 32px 32px 0 0;
+    }
+    .week-badge-circle {
+      width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 20px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 900;
+      backdrop-filter: blur(10px); margin-right: 24px;
+    }
+    .header-nav-btns { display: flex; gap: 10px; position: absolute; top: 40px; right: 40px; }
+    .nav-btn-circle {
+      width: 44px; height: 44px; background: rgba(255,255,255,0.2); border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s;
+    }
+    .nav-btn-circle:hover { background: rgba(255,255,255,0.3); }
+    
+    .modal-body-content { background: var(--bg-nav); padding: 40px; }
+    .meta-row { display: flex; gap: 32px; margin-bottom: 32px; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); }
+    .meta-item { display: flex; align-items: center; gap: 8px; }
+    
+    .search-bar-modal {
+      width: 100%; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border);
+      border-radius: 20px; padding: 16px 24px; color: #fff; margin-bottom: 30px;
+      font-size: 1rem; display: flex; align-items: center; gap: 12px;
+    }
+    .search-bar-modal input { background: none; border: none; color: #fff; width: 100%; outline: none; }
+    
+    /* Previsualizador */
+    .preview-modal .modal-content { max-width: 90%; width: 1200px; height: 85vh; display: flex; flex-direction: column; padding: 60px 30px 30px 30px; }
+    .preview-body { flex: 1; width: 100%; background: #000; border-radius: 12px; overflow: hidden; position: relative; }
+    .preview-body iframe, .preview-body img, .preview-body video { width: 100%; height: 100%; object-fit: contain; border: none; }
+    
+    .modal-close { position: absolute; top: 24px; right: 24px; font-size: 1.8rem; cursor: pointer; color: var(--text-muted); transition: color 0.3s; z-index: 10; }
+    .modal-close:hover { color: #fff; }
+    
+    .ms-grid-archivos {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px;
+    }
+    .file-card {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 24px;
+      padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center;
+      transition: all 0.4s var(--ease); position: relative;
+    }
+    .file-card:hover {
+      background: rgba(255,255,255,0.07); border-color: var(--primary);
+      transform: translateY(-8px); box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+    }
+    .file-icon-large { 
+      width: 80px; height: 80px; background: rgba(139, 92, 246, 0.1); border-radius: 20px;
+      display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin-bottom: 20px;
+      color: var(--primary);
+    }
+    .file-card-name { font-weight: 700; font-size: 1rem; color: #fff; margin-bottom: 15px; height: 40px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .file-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+
+    @media (max-width: 1200px) { .weeks-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .weeks-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <div class="bg-glow">
+    <div class="glow-1"></div>
+    <div class="glow-2"></div>
+  </div>
+
+  <nav class="nav-floating">
+    <div class="nav-logo" onclick="window.location.href='../index.html'" style="cursor:pointer">
+      <div class="logo-icon">RM</div>
+      <span>Ruel Manuel</span>
+    </div>
+    <div class="nav-links">
+      <a href="../index.html">Inicio</a>
+      <a href="sobreMi.html">Sobre Mí</a>
+      <a href="cursos.html">Cursos</a>
+      <a href="contacto.html">Contacto</a>
+      <button class="btn-theme-toggle" onclick="TEMA.toggle()" id="themeBtn">🌙</button>
+      <a href="login.html" class="btn-admin-pill">Admin</a>
+    </div>
+  </nav>
+
+  <header class="section-padding" style="padding-top: 180px;">
+    <div class="container">
+      <a href="cursos.html" style="color: var(--primary); text-decoration: none; font-weight: 700; margin-bottom: 24px; display: inline-flex; align-items: center; gap: 8px;">
+        <span>&larr;</span> Volver al Directorio
+      </a>
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 32px;">
+        <div style="max-width: 800px;">
+          <h1 class="section-title" id="cursoTitulo" style="text-align: left; margin-bottom: 16px;">Cargando asignatura...</h1>
+          <p class="hero-desc" id="cursoDesc" style="margin-bottom: 0;"></p>
+        </div>
+        <div style="text-align: right; background: var(--bg-card); padding: 24px; border-radius: 24px; border: 1px solid var(--border);">
+          <span style="font-weight: 800; color: var(--text-muted); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px;">Archivos Totales</span>
+          <div style="font-size: 3.5rem; font-weight: 800; color: var(--primary); line-height: 1;" id="badgeArchivos">0</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="section-padding" style="padding-top: 0;">
+    <div class="container" id="semanasList">
+      <div style="text-align: center; padding: 100px 0;"><p style="color: var(--text-muted);">Sincronizando malla académica...</p></div>
+    </div>
+  </section>
+
+  <!-- MODAL DETALLE DE SEMANA (REDISEÑADO) -->
+  <div class="modal-overlay modal-semana" id="modalSemana" onclick="UI.cerrarModal(event, 'modalSemana')">
+    <div class="modal-content">
+      <div class="modal-header-gradient">
+        <div style="display: flex; align-items: center;">
+          <div class="week-badge-circle" id="msBadge">1</div>
+          <div>
+            <div style="text-transform: uppercase; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; opacity: 0.8; margin-bottom: 4px;">Semana del curso</div>
+            <h2 id="msTitulo" class="outfit" style="margin:0; font-size: 1.8rem; letter-spacing: -0.5px;">Semana 01: Cargando...</h2>
+          </div>
+        </div>
+        <div class="header-nav-btns">
+          <div class="nav-btn-circle" onclick="UI.navegarSemana(-1)">←</div>
+          <div class="nav-btn-circle" onclick="UI.navegarSemana(1)">→</div>
+          <div class="nav-btn-circle" style="background: rgba(239, 68, 68, 0.4); color: white;" onclick="UI.cerrarModal(event, 'modalSemana', true)">✕</div>
+        </div>
+      </div>
+
+      <div class="modal-body-content">
+        <div class="meta-row">
+          <div class="meta-item"><span>📚</span> <span id="msUnidadLabel">UNIDAD 01</span></div>
+          <div class="meta-item"><span>📅</span> <span id="msSemanaLabel">Semana 1 de 16</span></div>
+          <div class="meta-item"><span>📁</span> <span id="msArchivosLabel">0 archivos</span></div>
+        </div>
+
+        <div class="search-bar-modal">
+          <span>🔍</span>
+          <input type="text" placeholder="Buscar archivo en esta semana..." onkeyup="UI.filtrarArchivos(this.value)">
+        </div>
+
+        <div id="msArchivos" class="ms-grid-archivos" style="max-height: 450px; overflow-y: auto; padding: 10px;">
+          <!-- Dinámico -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PREVISUALIZADOR -->
+  <div class="modal-overlay preview-modal" id="modalPreview" onclick="UI.cerrarModal(event, 'modalPreview')">
+    <div class="modal-content">
+      <div class="modal-close" onclick="UI.cerrarModal(event, 'modalPreview', true)">✕</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 id="pvTitulo" class="outfit" style="margin:0">Previsualización</h3>
+        <a id="pvDownload" href="#" download class="btn-premium btn-primary" style="padding: 8px 16px; font-size: 0.8rem;">Descargar Directo</a>
+      </div>
+      <div class="preview-body" id="pvBody"></div>
+    </div>
+  </div>
+
+  <footer><p>&copy; 2026 Ruel Manuel Chavez Orihuela. Todos los derechos reservados.</p></footer>
+
+  <script src="../controllers/supabase.js"></script>
+  <script src="../assets/js/app.js"></script>
+  <script>
+    let _curso = null;
+
+    const UI = {
+      _currentSemana: 1,
+      abrirModalSemana(numSemana) {
+        this._currentSemana = numSemana;
+        const semanaData = _curso.semanas.find(x => x.numero === numSemana);
+        const archs = semanaData ? (semanaData.archivos || []) : [];
+        const unidad = Math.ceil(numSemana / 4);
+
+        document.getElementById('msBadge').textContent = numSemana;
+        document.getElementById('msTitulo').textContent = `Semana ${numSemana < 10 ? '0'+numSemana : numSemana}: ${semanaData?.titulo || 'Contenido Semanal'}`;
+        document.getElementById('msUnidadLabel').textContent = `UNIDAD ${unidad < 10 ? '0'+unidad : unidad}`;
+        document.getElementById('msSemanaLabel').textContent = `Semana ${numSemana} de 16`;
+        document.getElementById('msArchivosLabel').textContent = `${archs.length} archivos`;
+        
+        this.renderArchivosList(archs);
+        document.getElementById('modalSemana').classList.add('open');
+      },
+      renderArchivosList(archs) {
+        const container = document.getElementById('msArchivos');
+        if (archs.length === 0) {
+          container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding: 40px;"><p>No hay archivos disponibles.</p></div>`;
+          return;
+        }
+        container.innerHTML = archs.map(a => `
+          <div class="file-card">
+            <div class="file-icon-large">${getFileIcon(getExtension(a.ruta))}</div>
+            <div class="file-card-name">${a.nombre}</div>
+            <div class="file-card-actions">
+              <button onclick="UI.previsualizar('${a.ruta}', '${a.nombre}')" class="btn-premium btn-secondary" style="padding: 10px; font-size: 0.75rem; background: rgba(255,255,255,0.05);">👁️ Previa</button>
+              <button onclick="UI.descargarDirecto('${a.ruta}', '${a.nombre}')" class="btn-premium btn-primary" style="padding: 10px; font-size: 0.75rem;">Descargar</button>
+            </div>
+          </div>
+        `).join('');
+      },
+      navegarSemana(dir) {
+        let nueva = this._currentSemana + dir;
+        if (nueva >= 1 && nueva <= 16) this.abrirModalSemana(nueva);
+      },
+      filtrarArchivos(q) {
+        const semanaData = _curso.semanas.find(x => x.numero === this._currentSemana);
+        const filtered = (semanaData?.archivos || []).filter(a => a.nombre.toLowerCase().includes(q.toLowerCase()));
+        this.renderArchivosList(filtered);
+      },
+      async descargarDirecto(url, nombre) {
+        try {
+          const res = await fetch(url);
+          const blob = await res.blob();
+          const localUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = localUrl;
+          a.download = nombre;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(localUrl);
+          a.remove();
+        } catch (e) {
+          window.open(url, '_blank');
+        }
+      },
+      previsualizar(url, nombre) {
+        const ext = getExtension(url);
+        const body = document.getElementById('pvBody');
+        document.getElementById('pvTitulo').textContent = nombre;
+        
+        // Configurar el botón de descarga en el modal
+        const btnDownload = document.getElementById('pvDownload');
+        btnDownload.onclick = (e) => {
+          e.preventDefault();
+          this.descargarDirecto(url, nombre);
+        };
+        
+        body.innerHTML = '';
+
+        if (['jpg','jpeg','png','gif','webp','svg'].includes(ext)) {
+          body.innerHTML = `<img src="${url}" alt="${nombre}" style="width:100%; height:100%; object-fit:contain;">`;
+        } else if (['mp4','webm','ogg'].includes(ext)) {
+          body.innerHTML = `<video src="${url}" controls autoplay style="width:100%; height:100%;"></video>`;
+        } else if (ext === 'pdf') {
+          body.innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none;"></iframe>`;
+        } else if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
+          body.innerHTML = `<iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}" style="width:100%; height:100%; border:none;"></iframe>`;
+        } else {
+          body.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:white; gap:20px;">
+            <span style="font-size:4rem;">📄</span>
+            <p>La previsualización no está disponible para este tipo de archivo (.${ext})</p>
+            <button onclick="UI.descargarDirecto('${url}', '${nombre}')" class="btn-premium btn-primary">Descargar para ver</button>
+          </div>`;
+        }
+        document.getElementById('modalPreview').classList.add('open');
+      },
+      cerrarModal(e, id, force = false) {
+        if (force || e.target.id === id) {
+          document.getElementById(id).classList.remove('open');
+          if (id === 'modalPreview') document.getElementById('pvBody').innerHTML = ''; // Limpiar para detener videos
+        }
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      TEMA.init();
+      const params = new URLSearchParams(window.location.search);
+      const cId = params.get('curso');
+      if (!cId) return window.location.href = 'cursos.html';
+      try {
+        _curso = await SupabaseCtrl.getCurso(cId);
+        if (!_curso) return window.location.href = 'cursos.html';
+        document.getElementById('cursoTitulo').textContent = `${_curso.icono || '📚'} ${_curso.nombre}`;
+        document.getElementById('cursoDesc').textContent = _curso.descripcion || 'Contenido académico detallado por unidades.';
+        const totalArchivos = _curso.semanas.reduce((a, s) => a + (s.archivos ? s.archivos.length : 0), 0);
+        document.getElementById('badgeArchivos').textContent = totalArchivos;
+        renderSemanas();
+      } catch (err) {
+        console.error("Error crítico:", err);
+      }
+    });
+
+    function renderSemanas() {
+      const list = document.getElementById('semanasList');
+      let html = '';
+      for(let u = 1; u <= 4; u++) {
+        html += `<div class="weeks-container" id="unit-${u}">`;
+        html += `<h2 class="unit-title outfit">Unidad ${u}</h2>`;
+        html += `<div class="weeks-grid">`;
+        for(let s = 1; s <= 4; s++) {
+          const numSemana = ((u-1) * 4) + s;
+          const semanaData = _curso.semanas.find(x => x.numero === numSemana);
+          const archs = semanaData ? (semanaData.archivos || []) : [];
+          html += `
+            <div class="week-card">
+              <div><span class="week-number">Semana ${numSemana}</span><h3 class="week-title">${semanaData ? (semanaData.titulo || 'Sesión de aprendizaje') : 'Tema por definir'}</h3></div>
+              <div class="week-footer">
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">${archs.length} archivos</span>
+                <button onclick="UI.abrirModalSemana(${numSemana})" class="btn-premium btn-secondary" style="padding: 10px 16px; font-size: 0.8rem;">Explorar</button>
+              </div>
+            </div>`;
+        }
+        html += `</div></div>`;
+      }
+      list.innerHTML = html;
+      setTimeout(() => { document.querySelectorAll('.weeks-container').forEach(el => el.classList.add('active')); }, 100);
+    }
+  </script>
+</body>
+</html>
