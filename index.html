@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portafolio | Ruel Manuel</title>
+  <link rel="stylesheet" href="assets/css/estilos.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- BACKGROUND DECORATION -->
+  <div class="bg-glow">
+    <div class="glow-1"></div>
+    <div class="glow-2"></div>
+  </div>
+
+  <!-- NAVEGACIÓN -->
+  <nav class="nav-floating">
+    <div class="nav-logo">
+      <div class="logo-icon">RM</div>
+      <span>Ruel Manuel</span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html">Inicio</a>
+      <a href="pages/sobreMi.html">Sobre Mí</a>
+      <a href="pages/cursos.html">Cursos</a>
+      <a href="pages/contacto.html">Contacto</a>
+      <button class="btn-theme-toggle" onclick="TEMA.toggle()" id="themeBtn"></button>
+      <a href="pages/login.html" class="btn-admin-pill">Admin</a>
+    </div>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <section class="hero-premium">
+    <div class="container">
+      <div class="hero-grid">
+        <div class="hero-content">
+          <span class="hero-badge" id="perfil-carrera">INGENIERO DE SISTEMAS</span>
+          <h1 class="hero-title" id="perfil-nombre">Chavez Orihuela<br>Ruel Manuel</h1>
+          <p class="hero-desc" id="perfil-bio">
+            Especializado en el diseño de soluciones de software escalables y arquitecturas tecnológicas de alto impacto.
+          </p>
+          <div class="hero-actions">
+            <a href="pages/contacto.html" class="btn-premium btn-primary">Contrátame</a>
+            <a href="pages/cursos.html" class="btn-premium btn-secondary">Ver Cursos</a>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="portrait-wrapper">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Portrait" class="portrait-img" id="perfil-foto" style="background: rgba(59,130,246,0.1);">
+            <div class="hero-stat-card">
+              <div style="font-weight: 800; font-size: 1.5rem; color: var(--primary);">8+</div>
+              <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Cursos Terminados</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT PREVIEW -->
+  <section class="section-padding">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-img-container reveal">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238b5cf6'%3E%3Cpath d='M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V6h5.17l2 2H20v10z'/%3E%3C/svg%3E" alt="Workspace" class="about-img" style="background: rgba(139, 92, 246, 0.1);">
+        </div>
+        <div class="about-text reveal">
+          <span class="section-subtitle">Trayectoria Académica</span>
+          <h2 class="section-title" style="text-align: left;">Pasión por la Ingeniería</h2>
+          <p class="hero-desc">
+            Como estudiante de la Universidad Peruana Los Andes, mi enfoque está en la excelencia técnica y la innovación constante en el desarrollo de software.
+          </p>
+          <div class="skill-tags" id="skills-container">
+            <!-- Dinámico -->
+            <span class="tag-premium">Arquitectura Limpia</span>
+            <span class="tag-premium">Desarrollo Web</span>
+            <span class="tag-premium">Bases de Datos</span>
+          </div>
+          <div style="margin-top: 40px;">
+            <a href="pages/sobreMi.html" class="btn-premium btn-secondary">Saber más sobre mí</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2026 Ruel Manuel Chavez Orihuela. Todos los derechos reservados.</p>
+  </footer>
+
+  <!-- SCRIPTS -->
+  <script src="controllers/supabase.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Inicializar tema
+      TEMA.init();
+      
+      // Cargar datos dinámicos
+      try {
+        const perfil = await SupabaseCtrl.getPerfil();
+        if (perfil) {
+          if (perfil.nombre_completo) document.getElementById('perfil-nombre').innerHTML = perfil.nombre_completo.replace('Ruel Manuel', '<br>Ruel Manuel');
+          if (perfil.carrera) document.getElementById('perfil-carrera').textContent = perfil.carrera;
+          if (perfil.bio) document.getElementById('perfil-bio').textContent = perfil.bio;
+          if (perfil.foto_url) document.getElementById('perfil-foto').src = perfil.foto_url;
+          
+          const skillsContainer = document.getElementById('skills-container');
+          if (perfil.skills && perfil.skills.length > 0) {
+            skillsContainer.innerHTML = perfil.skills.map(s => `<span class="tag-premium">${s.nombre}</span>`).join('');
+          }
+        }
+      } catch (e) {
+        console.error("Error cargando perfil:", e);
+      }
+      
+      // Animaciones de scroll
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) entry.target.classList.add('active');
+        });
+      }, { threshold: 0.1 });
+      
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    });
+  </script>
+</body>
+</html>
