@@ -226,7 +226,7 @@ h1, h2, h3, h4, .outfit {
   font-weight: 800;
   line-height: 1.1;
   margin-bottom: 24px;
-  background: linear-gradient(to right, #fff, var(--text-muted));
+  background: linear-gradient(to left, #fff, var(--text-muted));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
